@@ -1,56 +1,118 @@
 import os
+import random
 import numpy as np
 from PIL import Image
 from scipy import sum, average
 
-_listaImagens = []
-_nomeImagens = []
-_normasImagens = []
+# Numero utilizado para comparar as normas
+comparative = 99999999999
 
 
+# Carrega imagens da pasta passada como argumento, separando na estrutura do dataset
+def carrega_imagens(nome_pasta):
+    # O dataset segue a seguinte estrutura, utilizando dicionário Python:
+    # dataset = {
+    #     'nome da classe (id da pessoa)': {
+    #         'fotos' : ['codigo da imagem 1','codigo da imagem 2',...]
+    #     }
+    # }
+    dataset = {}
+    nome_imagens = os.listdir("./" + nome_pasta)
+
+    for img in nome_imagens:
+        id = img.split('-')[0]
+        codigo = img.split('-')[1].split('.')[0]
+        if not(dataset.get(id)):
+            dataset.update({id: {'fotos': [codigo]}})
+        else:
+            dataset.get(id)["fotos"].append(codigo)
+
+    return dataset
+
+
+# A função recebe o número de imagens para testes por classe como parâmetro
+def separa_conjuntos(num_teste, nome_pasta):
+    dataset = carrega_imagens(nome_pasta)
+    teste_set = []
+    treino_set = []
+
+    for classe in dataset:
+        for i in range(num_teste):
+            imagem = random.choice(dataset[classe]['fotos'])
+            teste_set.append(classe + '-' + imagem)
+            dataset[classe]['fotos'].remove(imagem)
+        for i in dataset[classe]['fotos']:
+            treino_set.append(classe + '-' + i)
+
+    return treino_set, teste_set
+
+
+# Calcula a norma da imagem
 def normalize(imagem):
     norm_range = imagem.max() - imagem.min()
     minimum = imagem.min()
     return (imagem - minimum)*255 / norm_range
 
 
+# Calcula a diferença entre as normas das imagens passadas como parâmetros
 def compare_images(imagem_1, imagem_2):
     imagem_1 = normalize(imagem_1)
     imagem_2 = normalize(imagem_2)
 
     difference = imagem_1 - imagem_2
     norma = sum(abs(difference))
-    print(norma)
+    return norma
 
 
-def carrega_imagens(nomePasta):
-    normas_imagens = []
-    nome_imagens = os.listdir("./" + nomePasta)
-    lista_imagens = np.empty((len(nome_imagens), 100, 100), dtype="float32")
+# Normalizar array de diferencas
+def normaliza_array(diferencas):
+    maximo = diferencas[max(diferencas, key=diferencas.get)]
+    minimo = diferencas[min(diferencas, key=diferencas.get)]
+    amplitude = maximo - minimo
 
-    for i in range(len(nome_imagens)):
-        # Salvando imagem
-        imagem = Image.open("./"+nomePasta+"/" + nome_imagens[i]).convert('LA')
-        imagem.show()
-        array_image = np.asarray(imagem, dtype="float32")
-        array_image = average(array_image, -1)
-        lista_imagens[i, :, :] = array_image
-        normas_imagens.append(0)
+    for id in diferencas:
+        diferencas[id] = (diferencas[id] - minimo) / amplitude
 
-        # Pegando id
-        nome_imagens[i] = nome_imagens[i].split("-")[0]
-
-    return lista_imagens, nome_imagens, normas_imagens
+    return diferencas
 
 
-_listaImagens, _nomeImagens, _normasImagens = carrega_imagens("very-easy")
-compare_images(_listaImagens[0], _listaImagens[1])
-# for i in range(len(listaImagens)):
-#    for j in range(len(listaImagens[i])):
-#        for k in range(len(listaImagens[i][j])):
-#            for l in range(len(listaImagens[i][j][k])):
-#                normasImagens[i] += listaImagens[i][j][k][l]
-#    normasImagens[i] = (normasImagens[i])**(0.5)
-#    print(normasImagens[i])
+# Realiza testes buscando a menor diferença entre as normas
+def reconhecimento_norma(nome_imagem, treino_set, nome_pasta, extensao):
+    imagem = np.asarray(
+        Image.open("./" + nome_pasta + "/" + nome_imagem + extensao).convert('LA')
+        , dtype="float32")
+    imagem = average(imagem, -1)
 
-# compare_images()
+    menor_diferenca = comparative
+    output = ''
+    diferencas = {}
+
+    for img in treino_set:
+        img_treino = np.asarray(
+            Image.open("./" + nome_pasta + "/" + img + extensao).convert('LA')
+            , dtype="float32")
+        img_treino = average(img_treino, -1)
+
+        norma = compare_images(imagem, img_treino)
+        diferencas.update({img.split('-')[0]: norma})
+        if norma < menor_diferenca:
+            menor_diferenca = norma
+            output = img.split('-')[0]
+
+    diferencas = normaliza_array(diferencas)
+    certeza = 100 - diferencas[output]
+    return certeza, output, diferencas
+
+
+# Realiza o teste de reconhecimento
+def reconhece(nome_pasta, extensao):
+    treino, teste = separa_conjuntos(1, "very-easy")
+
+    for img in teste:
+        print("-> Reconhecendo (" + img + ")")
+        certeza, output, diferencas = reconhecimento_norma(img, treino, nome_pasta, extensao)
+        print("\t |-> ID com melhor semelhança: " + str(output) + " , % de confiança: " + str(certeza) + "%")
+
+
+reconhece('very-easy', '.jpg')
+
