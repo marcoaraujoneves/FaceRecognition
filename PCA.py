@@ -105,8 +105,8 @@ def reconhecimento_norma(nome_imagem, treino_set, nome_pasta, extensao):
 
 
 # Realiza o teste de reconhecimento
-def reconhece(nome_pasta, extensao, num_imagens_teste):
-    treino, teste = separa_conjuntos(num_imagens_teste, nome_pasta)
+def reconhece(nome_pasta, extensao):
+    treino, teste = separa_conjuntos(3, nome_pasta)
 
     for img in teste:
         print("-> Reconhecendo (" + img + ")")
@@ -114,5 +114,5 @@ def reconhece(nome_pasta, extensao, num_imagens_teste):
         print("\t |-> ID com melhor semelhança: " + str(output) + " , % de confiança: " + str(certeza) + "%")
 
 
-reconhece('extras/facebookfaces-2/crop-outer', '.png', 3)
+reconhece('easy', '.jpg')
 
