@@ -1,8 +1,16 @@
-import os
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import os, sys
 import random
 import numpy as np
 from PIL import Image
 from scipy import sum, average
+
+# Permite a colorização do console
+from sty import fg, bg, ef, rs, Style, RgbFg
+if sys.platform == "win32":
+    os.system('color')
 
 # Numero utilizado para comparar as normas
 comparative = 99999999999
@@ -103,16 +111,23 @@ def reconhecimento_norma(nome_imagem, treino_set, nome_pasta, extensao):
     certeza = 100 - diferencas[output]
     return certeza, output, diferencas
 
+def formataCerteza(cert):
+    if cert < 50:
+        return fg.red + str(cert)
+    elif (cert >= 50 and cert < 80):
+        return fg.yellow + str(cert)
+    elif cert >= 80:
+        return fg.green + str(cert)
+
 
 # Realiza o teste de reconhecimento
 def reconhece(nome_pasta, extensao, num_imagens_teste):
     treino, teste = separa_conjuntos(num_imagens_teste, nome_pasta)
 
     for img in teste:
-        print("-> Reconhecendo (" + img + ")")
+        print("-> RECONHECENDO (" + fg.magenta + ef.italic + "ID: " + img.split("-")[0] + rs.fg + ", " + fg.yellow + "Foto: " + img.split("-")[1] + rs.fg + ")")
         certeza, output, diferencas = reconhecimento_norma(img, treino, nome_pasta, extensao)
-        print("\t |-> ID com melhor semelhança: " + str(output) + " , % de confiança: " + str(certeza) + "%")
+        print("\t |-> Melhor semelhança = " + fg.magenta + ef.u + "ID: " + str(output) + rs.u + rs.fg + ", Certeza = " + ef.u +formataCerteza(certeza) + "%" + rs.u + rs.fg)
 
 
 reconhece('extras/facebookfaces-2/crop-outer', '.png', 3)
-
