@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os, sys
+import os
+import sys
 import random
 import numpy as np
 from PIL import Image
@@ -28,12 +29,13 @@ def carrega_imagens(nome_pasta):
     nome_imagens = os.listdir("./" + nome_pasta)
 
     for img in nome_imagens:
-        id = img.split('-')[0]
-        codigo = img.split('-')[1].split('.')[0]
-        if not(dataset.get(id)):
-            dataset.update({id: {'fotos': [codigo]}})
-        else:
-            dataset.get(id)["fotos"].append(codigo)
+        if img.endswith(".jpg") or img.endswith(".png"):
+            id = img.split('-')[0]
+            codigo = img.split('-')[1].split('.')[0]
+            if not(dataset.get(id)):
+                dataset.update({id: {'fotos': [codigo]}})
+            else:
+                dataset.get(id)["fotos"].append(codigo)
 
     return dataset
 
@@ -87,8 +89,7 @@ def normaliza_array(diferencas):
 # Realiza testes buscando a menor diferença entre as normas
 def reconhecimento_norma(nome_imagem, treino_set, nome_pasta, extensao):
     imagem = np.asarray(
-        Image.open("./" + nome_pasta + "/" + nome_imagem + extensao).convert('LA')
-        , dtype="float32")
+        Image.open("./" + nome_pasta + "/" + nome_imagem + extensao).convert('LA'), dtype="float32")
     imagem = average(imagem, -1)
 
     menor_diferenca = comparative
@@ -97,8 +98,7 @@ def reconhecimento_norma(nome_imagem, treino_set, nome_pasta, extensao):
 
     for img in treino_set:
         img_treino = np.asarray(
-            Image.open("./" + nome_pasta + "/" + img + extensao).convert('LA')
-            , dtype="float32")
+            Image.open("./" + nome_pasta + "/" + img + extensao).convert('LA'), dtype="float32")
         img_treino = average(img_treino, -1)
 
         norma = compare_images(imagem, img_treino)
@@ -110,6 +110,7 @@ def reconhecimento_norma(nome_imagem, treino_set, nome_pasta, extensao):
     diferencas = normaliza_array(diferencas)
     certeza = 100 - diferencas[output]
     return certeza, output, diferencas
+
 
 def formataCerteza(cert):
     if cert < 50:
@@ -125,9 +126,20 @@ def reconhece(nome_pasta, extensao, num_imagens_teste):
     treino, teste = separa_conjuntos(num_imagens_teste, nome_pasta)
 
     for img in teste:
-        print("-> RECONHECENDO (" + fg.magenta + ef.italic + "ID: " + img.split("-")[0] + rs.fg + ", " + fg.yellow + "Foto: " + img.split("-")[1] + rs.fg + ")")
-        certeza, output, diferencas = reconhecimento_norma(img, treino, nome_pasta, extensao)
-        print("\t |-> Melhor semelhança = " + fg.magenta + ef.u + "ID: " + str(output) + rs.u + rs.fg + ", Certeza = " + ef.u +formataCerteza(certeza) + "%" + rs.u + rs.fg)
+        certeza, output, diferencas = reconhecimento_norma(
+            img, treino, nome_pasta, extensao)
+
+        print(
+            f"-> RECONHECENDO ("
+            f"{fg.magenta}ID: {img.split('-')[0]}{rs.fg}, "
+            f"{fg.yellow}Foto: {img.split('-')[1]}{rs.fg})"
+        )
+
+        print(
+            f"\t |-> Melhor semelhança = "
+            f"{fg.magenta}{ef.u}ID: {output}{rs.u}{rs.fg}, "
+            f"Certeza = "
+            f"{ef.u}{formataCerteza(certeza)}%{rs.u}{rs.fg} ")
 
 
-reconhece('extras/facebookfaces-2/crop-outer', '.png', 3)
+reconhece('hard', '.jpg', 5)
