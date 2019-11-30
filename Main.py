@@ -5,6 +5,7 @@ import os
 import sys
 import random
 import numpy as np
+import time
 from PIL import Image
 from scipy import sum, average
 
@@ -112,34 +113,63 @@ def reconhecimento_norma(nome_imagem, treino_set, nome_pasta, extensao):
     return certeza, output, diferencas
 
 
-def formataCerteza(cert):
-    if cert < 50:
-        return fg.red + str(cert)
-    elif (cert >= 50 and cert < 80):
-        return fg.yellow + str(cert)
-    elif cert >= 80:
-        return fg.green + str(cert)
+def formataPorcentagem(pcent, gr):
+    if pcent < 50:
+        return f"{gr.red}{pcent:10f}"
+    elif (pcent >= 50 and pcent < 80):
+        return f"{gr.yellow}{pcent:10f}"
+    elif pcent >= 80:
+        return f"{gr.green}{pcent:10f}"
 
+def taxaAcertos(entrada, saida):
+    acertos = 0
+    for i in range(len(entrada)):
+        if (entrada[i] == saida[i]):
+            acertos += 1
+
+    return acertos*100/len(saida)
 
 # Realiza o teste de reconhecimento
 def reconhece(nome_pasta, extensao, num_imagens_teste):
+    inicio = time.time()
     treino, teste = separa_conjuntos(num_imagens_teste, nome_pasta)
+    img_teste = []
+    img_output = []
+
 
     for img in teste:
         certeza, output, diferencas = reconhecimento_norma(
             img, treino, nome_pasta, extensao)
+        
+        img = img.split('-')[0]
+        
+        img_teste.append(img)
+        img_output.append(output)
+
+        
 
         print(
             f"-> RECONHECENDO ("
-            f"{fg.magenta}ID: {img.split('-')[0]}{rs.fg}, "
-            f"{fg.yellow}Foto: {img.split('-')[1]}{rs.fg})"
+            f"{fg.magenta}ID: {int(img):02}{rs.fg}, "
+            f"{fg.yellow}Foto: {int(img):02}{rs.fg})"
         )
 
         print(
             f"\t |-> Melhor semelhança = "
-            f"{fg.magenta}{ef.u}ID: {output}{rs.u}{rs.fg}, "
+            f"{fg.magenta}{ef.u}ID: {int(output):02}{rs.u}{rs.fg}, "
             f"Certeza = "
-            f"{ef.u}{formataCerteza(certeza)}%{rs.u}{rs.fg} ")
+            f"{ef.u}{formataPorcentagem(certeza, fg)}%{rs.u}{rs.fg} ")
+
+    taxa_acertos = taxaAcertos(img_teste, img_output)
+    fim = time.time()
+
+    return taxa_acertos, fim - inicio
 
 
-reconhece('hard', '.jpg', 5)
+def main():
+    taxa_acertos, tempo = reconhece('easy', '.jpg', 5)
+    print(f"\n{'======== ESTATÍSTICAS ========':^50}")
+    print(f"\nO processamento levou {bg.da_blue}{tempo} segundos{rs.bg}")
+    print(f"A taxa de acertos foi de {fg.black}{formataPorcentagem(taxa_acertos, bg)}%{rs.all}")
+
+main()
