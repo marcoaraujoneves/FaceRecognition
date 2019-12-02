@@ -103,12 +103,30 @@ def calcular_taxa_acertos(entrada, saida):
     return acertos*100/len(saida)
 
 
+def calcula_mean_vector(matriz):
+    matriz = np.array(matriz)
+
+    return matriz.mean(axis=0)
+
+
+def subtrai_mean_vector(matriz):
+
+    mean_vector = calcula_mean_vector(matriz)
+
+    for coluna in matriz:
+        for item in range(len(matriz)):
+            coluna[item] = abs(coluna[item] - mean_vector[item])
+
+    print(matriz)
+    return matriz
+
+
 def montar_data_matrix(dataset, nome_pasta, extensao):
     data_matrix = []
 
     for img_name in dataset:
         imagem = np.asarray(
-            Image.open("./" + nome_pasta + "/" + img_name + extensao).convert('LA'), dtype="float32")
+            Image.open("./" + nome_pasta + "/" + img_name).convert('LA'), dtype="float32")
         imagem = average(imagem, -1)
         coluna_imagem = np.empty((len(imagem) * len(imagem[0]), 1))
 
@@ -219,4 +237,8 @@ def main():
     print(f"A taxa de acertos foi de {fg.black}{formata_porcentagem(taxa_acertos, bg)}%{rs.all}")
 
 
-main()
+# main()
+
+data = montar_data_matrix(os.listdir("./" + 'easy'), 'easy', '')
+
+subtrai_mean_vector(data)
