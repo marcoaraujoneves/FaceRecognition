@@ -113,9 +113,9 @@ def subtrai_mean_vector(matriz):
 
     mean_vector = calcula_mean_vector(matriz)
 
-    for coluna in matriz:
-        for item in range(len(matriz)):
-            coluna[item] = abs(coluna[item] - mean_vector[item])
+    for i, coluna in enumerate(matriz):
+        coluna = abs(coluna - mean_vector)
+        matriz[i] = coluna
 
     print(matriz)
     return matriz
@@ -130,8 +130,9 @@ def montar_data_matrix(dataset, nome_pasta, extensao):
         imagem = average(imagem, -1)
         coluna_imagem = np.empty((len(imagem) * len(imagem[0]), 1))
 
-        for i in imagem:
-            coluna_imagem = coluna_imagem + i
+        for i, col in enumerate(imagem):
+            for j, k in zip(range(i*100, i*100+100), range(0,100)):
+                coluna_imagem[j] = col[k]
 
         data_matrix.append(coluna_imagem)
 
@@ -205,7 +206,7 @@ def reconhece(nome_pasta, extensao, num_imagens_teste):
     img_output = []
 
     for img in teste:
-        certeza, output, diferencas = reconhecimento_norma(img, treino, nome_pasta, extensao)
+        certeza, output, diferencas = reconhecimento_pca(img, treino, nome_pasta, extensao)
         
         img = img.split('-')[0]
         
@@ -237,7 +238,7 @@ def main():
     print(f"A taxa de acertos foi de {fg.black}{formata_porcentagem(taxa_acertos, bg)}%{rs.all}")
 
 
-# main()
+#main()
 
 data = montar_data_matrix(os.listdir("./" + 'easy'), 'easy', '')
 
