@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 import random
 import numpy as np
 import time
+import sklearn.decomposition as decomp
 from PIL import Image
 from scipy import sum, average
 
@@ -87,6 +85,41 @@ def normaliza_array(diferencas):
     return diferencas
 
 
+def formata_porcentagem(pcent, gr):
+    if pcent < 50:
+        return f"{gr.red}{pcent:10f}"
+    elif pcent >= 50 and pcent < 80:
+        return f"{gr.yellow}{pcent:10f}"
+    elif pcent >= 80:
+        return f"{gr.green}{pcent:10f}"
+
+
+def calcular_taxa_acertos(entrada, saida):
+    acertos = 0
+    for i in range(len(entrada)):
+        if entrada[i] == saida[i]:
+            acertos += 1
+
+    return acertos*100/len(saida)
+
+
+def montar_data_matrix(dataset, nome_pasta, extensao):
+    data_matrix = []
+
+    for img_name in dataset:
+        imagem = np.asarray(
+            Image.open("./" + nome_pasta + "/" + img_name + extensao).convert('LA'), dtype="float32")
+        imagem = average(imagem, -1)
+        coluna_imagem = np.empty((len(imagem) * len(imagem[0]), 1))
+
+        for i in imagem:
+            coluna_imagem = coluna_imagem + i
+
+        data_matrix.append(coluna_imagem)
+
+    return data_matrix
+
+
 # Realiza testes buscando a menor diferença entre as normas
 def reconhecimento_norma(nome_imagem, treino_set, nome_pasta, extensao):
     imagem = np.asarray(
@@ -113,21 +146,38 @@ def reconhecimento_norma(nome_imagem, treino_set, nome_pasta, extensao):
     return certeza, output, diferencas
 
 
-def formataPorcentagem(pcent, gr):
-    if pcent < 50:
-        return f"{gr.red}{pcent:10f}"
-    elif (pcent >= 50 and pcent < 80):
-        return f"{gr.yellow}{pcent:10f}"
-    elif pcent >= 80:
-        return f"{gr.green}{pcent:10f}"
+# Aplica a decomposição baseado no método PCA() da lib
+def aplica_pca(imagem):
+    pca = decomp.PCA(n_components=2)
+    pca.fit(imagem)
+    return pca.transform(imagem)
 
-def taxaAcertos(entrada, saida):
-    acertos = 0
-    for i in range(len(entrada)):
-        if (entrada[i] == saida[i]):
-            acertos += 1
 
-    return acertos*100/len(saida)
+# Realiza os testes aplicando o método PCA
+def reconhecimento_pca(nome_imagem, treino_set, nome_pasta, extensao):
+    imagem = np.asarray(
+        Image.open("./" + nome_pasta + "/" + nome_imagem + extensao).convert('LA'), dtype="float32")
+    imagem = average(imagem, -1)
+
+    menor_diferenca = comparative
+    output = ''
+    diferencas = {}
+
+    for img in treino_set:
+        img_treino = np.asarray(
+            Image.open("./" + nome_pasta + "/" + img + extensao).convert('LA'), dtype="float32")
+        img_treino = average(img_treino, -1)
+
+        norma = compare_images(aplica_pca(imagem), aplica_pca(img_treino))
+        diferencas.update({img.split('-')[0]: norma})
+        if norma < menor_diferenca:
+            menor_diferenca = norma
+            output = img.split('-')[0]
+
+    diferencas = normaliza_array(diferencas)
+    certeza = 100 - diferencas[output]
+    return certeza, output, diferencas
+
 
 # Realiza o teste de reconhecimento
 def reconhece(nome_pasta, extensao, num_imagens_teste):
@@ -136,17 +186,13 @@ def reconhece(nome_pasta, extensao, num_imagens_teste):
     img_teste = []
     img_output = []
 
-
     for img in teste:
-        certeza, output, diferencas = reconhecimento_norma(
-            img, treino, nome_pasta, extensao)
+        certeza, output, diferencas = reconhecimento_norma(img, treino, nome_pasta, extensao)
         
         img = img.split('-')[0]
         
         img_teste.append(img)
         img_output.append(output)
-
-        
 
         print(
             f"-> RECONHECENDO ("
@@ -158,18 +204,19 @@ def reconhece(nome_pasta, extensao, num_imagens_teste):
             f"\t |-> Melhor semelhança = "
             f"{fg.magenta}{ef.u}ID: {int(output):02}{rs.u}{rs.fg}, "
             f"Certeza = "
-            f"{ef.u}{formataPorcentagem(certeza, fg)}%{rs.u}{rs.fg} ")
+            f"{ef.u}{formata_porcentagem(certeza, fg)}%{rs.u}{rs.fg} ")
 
-    taxa_acertos = taxaAcertos(img_teste, img_output)
+    taxa_acertos = calcular_taxa_acertos(img_teste, img_output)
     fim = time.time()
 
     return taxa_acertos, fim - inicio
 
 
 def main():
-    taxa_acertos, tempo = reconhece('easy', '.jpg', 5)
+    taxa_acertos, tempo = reconhece('medium', '.jpg', 3)
     print(f"\n{'======== ESTATÍSTICAS ========':^50}")
     print(f"\nO processamento levou {bg.da_blue}{tempo} segundos{rs.bg}")
-    print(f"A taxa de acertos foi de {fg.black}{formataPorcentagem(taxa_acertos, bg)}%{rs.all}")
+    print(f"A taxa de acertos foi de {fg.black}{formata_porcentagem(taxa_acertos, bg)}%{rs.all}")
+
 
 main()
